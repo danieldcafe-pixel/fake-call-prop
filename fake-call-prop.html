@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0c0505">
+<title>Simulated Call</title>
+<style>
+  :root{
+    --alert:#ff4d4d;
+    --amber:#ffb020;
+    --orange:#ff8a2b;
+    --text-soft:#d9c7c3;
+    --line:rgba(255,255,255,.1);
+    --ease: cubic-bezier(.22,1,.36,1);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; width:100%; height:100%; overflow:hidden;
+    background:#000; color:#fff;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    -webkit-user-select:none; user-select:none;
+  }
+  #app{
+    position:relative; width:100vw; height:100dvh; min-height:100vh;
+    background:
+      radial-gradient(90% 55% at 50% -10%, rgba(255,77,77,.16) 0%, transparent 55%),
+      radial-gradient(70% 50% at 90% 100%, rgba(255,176,32,.08) 0%, transparent 60%),
+      radial-gradient(120% 90% at 50% 100%, #150707 0%, #060202 55%, #000 100%);
+    overflow:hidden;
+  }
+  .screen{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center;
+    padding: calc(env(safe-area-inset-top,0px) + 60px) 22px calc(env(safe-area-inset-bottom,0px) + 30px);
+    opacity:0; pointer-events:none;
+    transform:translateY(14px) scale(.985);
+    transition:opacity .38s var(--ease), transform .38s var(--ease);
+  }
+  .screen.active{ opacity:1; pointer-events:auto; transform:translateY(0) scale(1); }
+
+  /* ---------- Dial screen ---------- */
+  #dialScreen{ justify-content:flex-end; gap:26px; }
+  .dial-display{
+    margin-top:20px; margin-bottom:auto;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .dial-eyebrow{ font-size:11px; letter-spacing:.22em; color:var(--orange); font-weight:700; text-transform:uppercase; opacity:.9; }
+  .dial-number{
+    font-size:56px; font-weight:700; letter-spacing:.04em; font-variant-numeric:tabular-nums;
+    text-shadow:0 0 30px rgba(255,77,77,.22);
+    min-height:64px; display:flex; align-items:center; justify-content:center;
+  }
+  .dial-hint{ font-size:12.5px; color:var(--text-soft); opacity:.55; letter-spacing:.02em; }
+
+  .keypad{
+    width:280px;
+    display:grid; grid-template-columns:repeat(3, 1fr);
+    border-top:1px solid var(--line);
+    border-left:1px solid var(--line);
+    margin-bottom:6px;
+  }
+  .key{
+    height:64px;
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; cursor:pointer;
+    transition:background .1s ease;
+  }
+  .key:active{ background:rgba(255,77,77,.16); }
+  .key .digit{ font-size:21px; font-weight:500; line-height:1; }
+
+  .call-btn{
+    width:100%; max-width:320px;
+    padding:18px 0; border-radius:6px;
+    background:linear-gradient(90deg,var(--alert),var(--amber));
+    border:none; color:#170202;
+    font-size:14.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+    cursor:pointer;
+    box-shadow:0 14px 34px rgba(255,77,77,.2);
+    transition:transform .14s var(--ease), filter .14s ease;
+  }
+  .call-btn:active{ transform:scale(.97); filter:brightness(.95); }
+
+  /* ---------- Call in progress ---------- */
+  #callScreen{ justify-content:space-between; }
+  .call-top{ display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; }
+  .call-eyebrow{ font-size:11px; letter-spacing:.22em; color:var(--orange); font-weight:700; text-transform:uppercase; opacity:.9; cursor:pointer; }
+  .call-title{ font-size:38px; font-weight:700; letter-spacing:.03em; }
+  .call-status{ font-size:14.5px; color:var(--text-soft); letter-spacing:.02em; min-height:18px; font-variant-numeric:tabular-nums; }
+
+  .orb-wrap{
+    margin-top:14px; width:186px; height:186px; border-radius:50%;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .orb-wrap::before, .orb-wrap::after{
+    content:""; position:absolute; inset:0; border-radius:50%;
+    border:1px solid rgba(255,77,77,.35);
+  }
+  .orb-wrap.active::before{ animation:ringExpand 1.7s var(--ease) infinite; }
+  .orb-wrap.active::after{ animation:ringExpand 1.7s var(--ease) infinite .6s; }
+  @keyframes ringExpand{
+    0%{ transform:scale(.82); opacity:.9; }
+    100%{ transform:scale(1.6); opacity:0; }
+  }
+  .orb{
+    width:116px; height:116px; border-radius:50%;
+    background:
+      radial-gradient(60% 60% at 32% 28%, rgba(255,255,255,.35), transparent 60%),
+      linear-gradient(150deg,var(--alert),var(--amber));
+    box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 0 24px rgba(255,255,255,.14);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .waveform{ display:flex; align-items:center; gap:4px; height:34px; }
+  .waveform span{
+    width:4px; border-radius:2px;
+    background:#170202;
+    opacity:.75;
+    animation:waveMove 1s ease-in-out infinite;
+  }
+  .waveform span:nth-child(1){ height:12px; animation-delay:0s; }
+  .waveform span:nth-child(2){ height:24px; animation-delay:.1s; }
+  .waveform span:nth-child(3){ height:32px; animation-delay:.2s; }
+  .waveform span:nth-child(4){ height:18px; animation-delay:.3s; }
+  .waveform span:nth-child(5){ height:26px; animation-delay:.4s; }
+  .waveform span:nth-child(6){ height:14px; animation-delay:.5s; }
+  @keyframes waveMove{
+    0%,100%{ transform:scaleY(.35); }
+    50%{ transform:scaleY(1); }
+  }
+  .waveform.paused span{ animation-play-state:paused; transform:scaleY(.28); }
+
+  .call-controls{ width:100%; display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .chip-row{ display:flex; gap:10px; }
+  .chip{
+    padding:11px 18px; border-radius:6px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text-soft);
+    font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    cursor:pointer;
+    transition:background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  .chip.on{ background:rgba(255,77,77,.16); border-color:var(--alert); color:#fff; }
+
+  .end-btn{
+    width:100%; max-width:320px;
+    padding:17px 0; border-radius:6px;
+    background:transparent;
+    border:1px solid var(--alert);
+    color:#fff;
+    font-size:14px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+    cursor:pointer;
+    margin-bottom:6px;
+    transition:transform .14s var(--ease), background .12s ease;
+  }
+  .end-btn:active{ background:rgba(255,77,77,.14); transform:scale(.97); }
+
+  /* ---------- Call ended ---------- */
+  #endScreen{ justify-content:center; align-items:center; gap:14px; }
+  .end-eyebrow{ font-size:11px; letter-spacing:.22em; color:var(--orange); font-weight:700; text-transform:uppercase; opacity:.9; }
+  .end-title{ font-size:25px; font-weight:700; }
+  .end-time{ font-size:13.5px; color:var(--text-soft); font-variant-numeric:tabular-nums; }
+  .redo-btn{
+    margin-top:28px;
+    padding:13px 28px; border-radius:6px;
+    background:transparent; border:1px solid var(--line);
+    color:#fff; font-size:13px; font-weight:700; letter-spacing:.04em; cursor:pointer;
+    transition:transform .14s var(--ease), border-color .12s ease;
+  }
+  .redo-btn:active{ transform:scale(.96); border-color:rgba(255,255,255,.32); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Dial screen -->
+  <section id="dialScreen" class="screen active">
+    <div class="dial-display">
+      <div class="dial-eyebrow">Emergency</div>
+      <div class="dial-number" id="dialNumber"></div>
+      <div class="dial-hint">Police</div>
+    </div>
+    <div class="keypad">
+      <div class="key" data-d="1"><span class="digit">1</span></div>
+      <div class="key" data-d="2"><span class="digit">2</span></div>
+      <div class="key" data-d="3"><span class="digit">3</span></div>
+      <div class="key" data-d="4"><span class="digit">4</span></div>
+      <div class="key" data-d="5"><span class="digit">5</span></div>
+      <div class="key" data-d="6"><span class="digit">6</span></div>
+      <div class="key" data-d="7"><span class="digit">7</span></div>
+      <div class="key" data-d="8"><span class="digit">8</span></div>
+      <div class="key" data-d="9"><span class="digit">9</span></div>
+      <div class="key" data-d="*"><span class="digit">*</span></div>
+      <div class="key" data-d="0"><span class="digit">0</span></div>
+      <div class="key" data-d="#"><span class="digit">#</span></div>
+    </div>
+    <button class="call-btn" id="callButton">Call</button>
+  </section>
+
+  <!-- Call in progress -->
+  <section id="callScreen" class="screen">
+    <div class="call-top">
+      <div class="call-eyebrow" id="callEyebrow">Dialing</div>
+      <div class="call-title" id="callTitle">Police · 911</div>
+      <div class="call-status" id="callStatus">Connecting…</div>
+    </div>
+
+    <div class="orb-wrap active" id="orbWrap">
+      <div class="orb">
+        <div class="waveform" id="waveform">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="call-controls">
+      <div class="chip-row">
+        <button class="chip" id="muteChip">Mute</button>
+        <button class="chip" id="speakerChip">Speaker</button>
+      </div>
+      <button class="end-btn" id="endButton">End Call</button>
+    </div>
+  </section>
+
+  <!-- Call ended -->
+  <section id="endScreen" class="screen">
+    <div class="end-eyebrow">Emergency</div>
+    <div class="end-title">Call Interrupted</div>
+    <div class="end-time" id="endTime">No Connection</div>
+    <button class="redo-btn" id="redoButton">Back to Dialer</button>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var dialScreen = document.getElementById('dialScreen');
+  var callScreen = document.getElementById('callScreen');
+  var endScreen  = document.getElementById('endScreen');
+  var dialNumber = document.getElementById('dialNumber');
+  var callTitle  = document.getElementById('callTitle');
+  var callEyebrow= document.getElementById('callEyebrow');
+  var callStatus = document.getElementById('callStatus');
+  var orbWrap    = document.getElementById('orbWrap');
+  var waveform   = document.getElementById('waveform');
+  var endTime    = document.getElementById('endTime');
+
+  var number = "";
+
+  function showScreen(el){
+    [dialScreen, callScreen, endScreen].forEach(function(s){ s.classList.remove('active'); });
+    el.classList.add('active');
+  }
+
+  document.querySelectorAll('.key').forEach(function(k){
+    k.addEventListener('click', function(){
+      if (number.length >= 12) return;
+      number += k.getAttribute('data-d');
+      dialNumber.textContent = number;
+    });
+  });
+  dialNumber.addEventListener('click', function(){
+    number = number.slice(0, -1);
+    dialNumber.textContent = number || '';
+  });
+
+  document.getElementById('callButton').addEventListener('click', function(){
+    callTitle.textContent = (number || '911') === '911' ? 'Police · 911' : number;
+    callEyebrow.textContent = 'Dialing';
+    callStatus.textContent = 'Connecting…';
+    orbWrap.classList.add('active');
+    waveform.classList.add('paused');
+    showScreen(callScreen);
+
+    if (navigator.vibrate) { try { navigator.vibrate(60); } catch(e){} }
+    // The call rings indefinitely and never connects.
+  });
+
+  function stopCall(){
+    showScreen(endScreen);
+  }
+
+  document.getElementById('endButton').addEventListener('click', stopCall);
+
+  function resetToDial(){
+    number = "";
+    dialNumber.textContent = number;
+    orbWrap.classList.remove('active');
+    waveform.classList.remove('paused');
+    showScreen(dialScreen);
+  }
+
+  document.getElementById('redoButton').addEventListener('click', resetToDial);
+  callEyebrow.addEventListener('click', resetToDial);
+
+  ['muteChip','speakerChip'].forEach(function(id){
+    document.getElementById(id).addEventListener('click', function(){
+      this.classList.toggle('on');
+    });
+  });
+})();
+</script>
+</body>
+</html>
