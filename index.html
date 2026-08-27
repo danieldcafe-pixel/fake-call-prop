@@ -45,13 +45,21 @@
     margin-top:20px; margin-bottom:auto;
     display:flex; flex-direction:column; align-items:center; gap:10px;
   }
-  .dial-eyebrow{ font-size:11px; letter-spacing:.22em; color:var(--orange); font-weight:700; text-transform:uppercase; opacity:.9; }
+  .dial-eyebrow{
+    font-size:11px; letter-spacing:.22em; color:var(--orange); font-weight:700; text-transform:uppercase;
+    opacity:0; transition:opacity .25s var(--ease);
+  }
+  .dial-eyebrow.show{ opacity:.9; }
   .dial-number{
     font-size:56px; font-weight:700; letter-spacing:.04em; font-variant-numeric:tabular-nums;
     text-shadow:0 0 30px rgba(255,77,77,.22);
     min-height:64px; display:flex; align-items:center; justify-content:center;
   }
-  .dial-hint{ font-size:12.5px; color:var(--text-soft); opacity:.55; letter-spacing:.02em; }
+  .dial-hint{
+    font-size:12.5px; color:var(--text-soft); letter-spacing:.02em;
+    opacity:0; transition:opacity .25s var(--ease);
+  }
+  .dial-hint.show{ opacity:.55; }
 
   .keypad{
     width:280px;
@@ -73,7 +81,7 @@
 
   .call-btn{
     width:100%; max-width:320px;
-    margin-bottom:40px;
+    margin-bottom:90px;
     padding:18px 0; border-radius:6px;
     background:linear-gradient(90deg,var(--alert),var(--amber));
     border:none; color:#170202;
@@ -179,7 +187,9 @@
   <!-- Dial screen -->
   <section id="dialScreen" class="screen active">
     <div class="dial-display">
+      <div class="dial-eyebrow" id="dialEyebrow">Emergency</div>
       <div class="dial-number" id="dialNumber"></div>
+      <div class="dial-hint" id="dialHint">Police</div>
     </div>
     <div class="keypad">
       <div class="key" data-d="1"><span class="digit">1</span></div>
@@ -239,6 +249,8 @@
   var callScreen = document.getElementById('callScreen');
   var endScreen  = document.getElementById('endScreen');
   var dialNumber = document.getElementById('dialNumber');
+  var dialEyebrow= document.getElementById('dialEyebrow');
+  var dialHint   = document.getElementById('dialHint');
   var callTitle  = document.getElementById('callTitle');
   var callEyebrow= document.getElementById('callEyebrow');
   var callStatus = document.getElementById('callStatus');
@@ -253,16 +265,24 @@
     el.classList.add('active');
   }
 
+  function updateDialLabels(){
+    var isEmergency = number === '911';
+    dialEyebrow.classList.toggle('show', isEmergency);
+    dialHint.classList.toggle('show', isEmergency);
+  }
+
   document.querySelectorAll('.key').forEach(function(k){
     k.addEventListener('click', function(){
       if (number.length >= 12) return;
       number += k.getAttribute('data-d');
       dialNumber.textContent = number;
+      updateDialLabels();
     });
   });
   dialNumber.addEventListener('click', function(){
     number = number.slice(0, -1);
     dialNumber.textContent = number || '';
+    updateDialLabels();
   });
 
   document.getElementById('callButton').addEventListener('click', function(){
@@ -286,6 +306,7 @@
   function resetToDial(){
     number = "";
     dialNumber.textContent = number;
+    updateDialLabels();
     orbWrap.classList.remove('active');
     waveform.classList.remove('paused');
     showScreen(dialScreen);
